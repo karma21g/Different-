@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pas pareil !</title>
+<style>
+:root{color-scheme:light dark;--bg:#f1efff;--fg:#1c1747;--card:#fff;--mut:#6b6591;--acc:#5b3df5;--onacc:#fff;--bd:#d9d4fb;--ko:#e11d74;--onko:#fff;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#14112b;--fg:#f0edff;--card:#211c45;--mut:#a9a2d6;--acc:#9b87ff;--onacc:#14112b;--bd:#382f6e;--ko:#ff5c9a;--onko:#14112b}}
+:root[data-theme="dark"]{--bg:#14112b;--fg:#f0edff;--card:#211c45;--mut:#a9a2d6;--acc:#9b87ff;--onacc:#14112b;--bd:#382f6e;--ko:#ff5c9a;--onko:#14112b}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:ui-rounded,"SF Pro Rounded",system-ui,sans-serif;line-height:1.4}
+#app{max-width:520px;margin:0 auto;padding:20px 16px 32px}
+h1{font-size:2rem;font-weight:900;margin:8px 0 4px;letter-spacing:-.02em}
+h2{font-size:1.7rem;font-weight:900;margin:14px 0 10px;text-align:center}
+h3{font-size:1rem;margin:20px 0 8px}
+.m{color:var(--mut);margin:4px 0 12px}
+.seg{display:flex;gap:6px;flex-wrap:wrap}
+.seg button{flex:1;min-width:52px;padding:12px 4px;border:2px solid var(--bd);background:var(--card);color:var(--fg);border-radius:12px;font:inherit;font-weight:700}
+.seg button.on{background:var(--acc);border-color:var(--acc);color:var(--onacc)}
+.big{display:block;width:100%;margin-top:22px;padding:16px;border:0;border-radius:16px;background:var(--acc);color:var(--onacc);font:inherit;font-size:1.2rem;font-weight:800}
+.big.alt{background:var(--card);color:var(--fg);border:2px solid var(--bd);margin-top:10px}
+.top{display:flex;justify-content:space-between;align-items:center;color:var(--mut);font-weight:700}
+.lnk{border:0;background:none;color:var(--mut);font-size:1.3rem;padding:6px}
+.bar{height:8px;border-radius:8px;background:var(--bd);overflow:hidden;margin-bottom:16px}
+.bar i{display:block;height:100%;background:var(--acc);animation:shrink linear forwards}
+@keyframes shrink{from{width:100%}to{width:0}}
+.chips{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-bottom:14px}
+.chip{min-width:52px;padding:10px 14px;border-radius:999px;border:3px solid var(--c);background:var(--card);color:var(--fg);font:inherit;font-weight:800}
+.chip.on{background:var(--c);color:#fff}
+.chip:disabled{opacity:.35}
+.opts{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+.opt{position:relative;min-height:84px;padding:16px 10px;border:2px solid var(--bd);border-radius:18px;background:var(--card);color:var(--fg);font:inherit;font-size:1.15rem;font-weight:800;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px}
+.opt:disabled{opacity:1}
+.opt em{font-style:normal;font-size:.85rem;padding:2px 10px;border-radius:99px;background:var(--c);color:#fff}
+.opt.g{background:var(--ko);border-color:var(--ko);color:var(--onko);animation:pop .4s}
+.opt b{font-size:.9rem}
+.many .opt{min-height:64px;font-size:1rem;padding:10px 6px}
+input,textarea{width:100%;padding:12px;border:2px solid var(--bd);border-radius:12px;background:var(--card);color:var(--fg);font:inherit;margin-bottom:8px}
+.row{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid var(--bd)}
+small{color:var(--mut)}
+@keyframes pop{50%{transform:scale(1.07)}}
+#msg{text-align:center;font-weight:700;min-height:1.4em;margin-top:16px}
+@media (prefers-reduced-motion:reduce){.opt.g{animation:none}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+const T={
+6:[["Continents",["🌍 Afrique","🌎 Amérique","🧊 Antarctique","🏯 Asie","🏰 Europe","🦘 Océanie"]],["Faces du dé",["⚀ 1","⚁ 2","⚂ 3","⚃ 4","⚄ 5","⚅ 6"]]],
+5:[["Océans",["🌊 Pacifique","🌊 Atlantique","🌊 Indien","🌊 Arctique","🌊 Austral"]],["Les 5 sens",["👁️ Vue","👂 Ouïe","👃 Odorat","👅 Goût","✋ Toucher"]]],
+4:[["Points cardinaux",["⬆️ Nord","⬇️ Sud","➡️ Est","⬅️ Ouest"]],["Saisons",["🌸 Printemps","☀️ Été","🍂 Automne","❄️ Hiver"]]],
+3:[["Formes",["⚪ Rond","🟦 Carré","🔺 Triangle"]],["Pierre, feuille, ciseaux",["✊ Pierre","✋ Feuille","✌️ Ciseaux"]]],
+2:[["Sexe",["♂ Mâle","♀ Femelle"]],["Pile ou face",["🪙 Pile","🪙 Face"]]]};
+const X={
+6:[["Fruits",["🍎 Pomme","🍌 Banane","🍇 Raisin","🍊 Orange","🍓 Fraise","🍉 Pastèque"]],["Animaux de la ferme",["🐶 Chien","🐱 Chat","🐰 Lapin","🐴 Cheval","🐮 Vache","🐷 Cochon"]],["Sports",["⚽ Foot","🏀 Basket","🎾 Tennis","🏉 Rugby","🏐 Volley","🏊 Natation"]]],
+5:[["Couleurs",["🔴 Rouge","🔵 Bleu","🟢 Vert","🟡 Jaune","🟣 Violet"]],["Instruments",["🎸 Guitare","🥁 Batterie","🎹 Piano","🎻 Violon","🎺 Trompette"]]],
+4:[["Cartes à jouer",["♠ Pique","♥ Cœur","♦ Carreau","♣ Trèfle"]],["Éléments",["🔥 Feu","💧 Eau","🌍 Terre","💨 Air"]],["Moments de la journée",["🌅 Matin","☀️ Midi","🌇 Soir","🌙 Nuit"]]],
+3:[["Feu tricolore",["🔴 Rouge","🟠 Orange","🟢 Vert"]],["Médailles",["🥇 Or","🥈 Argent","🥉 Bronze"]],["États de la matière",["🧊 Solide","💧 Liquide","💨 Gaz"]]],
+2:[["Jour ou nuit",["☀️ Jour","🌙 Nuit"]],["Chaud ou froid",["🔥 Chaud","❄️ Froid"]],["Gauche ou droite",["⬅️ Gauche","➡️ Droite"]],["Oui ou non",["✅ Oui","❌ Non"]]]};
+for(const k in X)T[k].push(...X[k]);
+const Y={
+6:[['Voyelles',['A','E','I','O','U','Y']]],
+7:[['Jours de la semaine',['Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi','Dimanche']],['Arc-en-ciel',['🔴 Rouge','🟠 Orange','🟡 Jaune','🟢 Vert','🔵 Bleu','🟦 Indigo','🟣 Violet']],['Notes de musique',['Do','Ré','Mi','Fa','Sol','La','Si']]],
+8:[['Planètes',['Mercure','Vénus','Terre','Mars','Jupiter','Saturne','Uranus','Neptune']],['Directions',['⬆️ Nord','↗️ Nord-Est','➡️ Est','↘️ Sud-Est','⬇️ Sud','↙️ Sud-Ouest','⬅️ Ouest','↖️ Nord-Ouest']]],
+9:[['Légumes',['🥕 Carotte','🍅 Tomate','🥔 Pomme de terre','🌽 Maïs','🥦 Brocoli','🍆 Aubergine','🥒 Concombre','🧅 Oignon','🧄 Ail']],['Chiffres de 1 à 9',['1','2','3','4','5','6','7','8','9']]],
+10:[['Chiffres de 0 à 9',['0','1','2','3','4','5','6','7','8','9']],['Animaux',['🐶 Chien','🐱 Chat','🐭 Souris','🐹 Hamster','🐰 Lapin','🦊 Renard','🐻 Ours','🐼 Panda','🐨 Koala','🐯 Tigre']]]};
+for(const k in Y)T[k]=(T[k]||[]).concat(Y[k]);
+const C=["#dc2626","#2563eb","#16a34a","#ca8a04","#9333ea","#db2777","#0891b2","#ea580c","#4d7c0f","#475569"];
+const S={mode:"solo",start:5,players:3,style:"hasard",pack:"general"},H={};
+firebase.initializeApp({apiKey:"AIzaSyDeMkh7Ip4DE7v7EOo--SZf_Vm93p2xnIM",authDomain:"different-4f31f.firebaseapp.com",projectId:"different-4f31f",storageBucket:"different-4f31f.firebasestorage.app",messagingSenderId:"795594640304",appId:"1:795594640304:web:6368b7fe595d37a86ea475"});
+const TH=firebase.firestore().collection("themes"),ADMIN_PW="admin1234";
+let U=[],ADM=false,ONLINE=true;
+
+let R={};
+const $=i=>document.getElementById(i),rnd=n=>Math.floor(Math.random()*n);
+const sh=a=>a.map(x=>[Math.random(),x]).sort((p,q)=>p[0]-q[0]).map(p=>p[1]);
+const wpick=w=>{let r=Math.random()*w.reduce((a,b)=>a+b,0);for(let i=0;i<w.length;i++){if((r-=w[i])<0)return i}return w.length-1};
+const seg=(k,items)=>`<div class="seg">${items.map(([v,l])=>`<button class="${S[k]===v?"on":""}" onclick='set(${JSON.stringify(k)},${JSON.stringify(v)})'>${l}</button>`).join("")}</div>`;
+function set(k,v){S[k]=v;if(S.players>S.start)S.players=S.start;home()}
+function home(){clearTimeout(R.t);const n=[2,3,4,5,6,7,8,9,10];
+$("app").innerHTML=`<h1>Pas pareil ! 🎯</h1><p class="m">Ne choisis pas la même option que le jeu, sinon tu es éliminé.</p><h3>Mode</h3>${seg("mode",[["solo","Solo"],["group","Groupe"]])}<h3>Options au départ</h3>${seg("start",n.map(x=>[x,x]))}${S.mode=="solo"?`<h3>Le jeu est…</h3>${seg("style",[["hasard","🎲 Hasard"],["malin","🧠 Malin"]])}`:`<h3>Joueurs (même écran)</h3>${seg("players",n.filter(x=>x<=S.start).map(x=>[x,x]))}`}<h3>Thèmes</h3>${seg("pack",[["general","Général"],["perso","Communauté"],["tout","Tout"]])}<button class="lnk" style="font-size:1rem;color:var(--acc);padding:10px 0" onclick="mine()">💡 Proposer un thème</button><button class="big" onclick="go()">Jouer</button><button class="lnk" style="opacity:.45;margin-top:18px" onclick="admin()">⚙️ Admin</button>`}
+function go(){R={opts:S.start,n:0,alive:S.mode=="group"?[...Array(S.players).keys()]:[0]};round()}
+function round(){R.n++;const d=S.mode=="solo"?6:Math.max(10,3+2*R.alive.length);let L=[];if(S.pack!="perso")L=L.concat(T[R.opts]||[]);if(S.pack!="general")L=L.concat(U.filter(u=>u.o.length==R.opts).map(u=>[u.n,u.o]));if(!L.length)L=T[R.opts];R.th=L[rnd(L.length)];R.claims={};R.sel=null;R.g=null;R.over=false;
+$("app").innerHTML=`<div class="top"><span>Manche ${R.n} · ${R.opts} options</span><button class="lnk" onclick="home()">✕</button></div><h2>${R.th[0]}</h2><div class="bar"><i style="animation-duration:${d}s"></i></div><div id="z"></div><div id="msg"></div>`;
+draw();R.t=setTimeout(reveal,d*1000)}
+const owner=i=>R.alive.find(p=>R.claims[p]===i);
+function draw(){const g=S.mode=="group",rv=R.g!==null;let h="";
+if(g&&!rv)h+=`<div class="chips">${R.alive.map(p=>`<button class="chip ${R.sel===p?"on":""}" style="--c:${C[p]}" ${p in R.claims?"disabled":""} onclick="sel(${p})">J${p+1}</button>`).join("")}</div>`;
+h+=`<div class="opts ${R.opts>6?"many":""}">${R.th[1].map((o,i)=>{const p=owner(i),t=p===undefined?"":`<em style="--c:${C[p]}">${g?"J"+(p+1):"Toi"}</em>`,hit=rv&&R.g===i;return `<button class="opt ${hit?"g":""}" ${rv||p!==undefined?"disabled":""} onclick="claim(${i})"><span>${o}</span>${t}${hit?"<b>🎯 Le jeu</b>":""}</button>`}).join("")}</div>`;
+$("z").innerHTML=h}
+function sel(p){R.sel=p;$("msg").textContent="";draw()}
+function claim(i){if(R.over)return;const p=S.mode=="solo"?0:R.sel;
+if(p===null){$("msg").textContent="Touche d’abord ton nom (J1, J2…), puis ton option.";return}
+R.claims[p]=i;R.sel=null;R.alive.every(q=>q in R.claims)?reveal():draw()}
+function reveal(){if(R.over)return;R.over=true;clearTimeout(R.t);
+const free=sh([...Array(R.opts).keys()].filter(i=>owner(i)===undefined));
+R.alive.forEach(p=>{if(!(p in R.claims))R.claims[p]=free.pop()});
+document.querySelector(".bar").style.visibility="hidden";
+$("msg").textContent="Le jeu choisit…";draw();
+setTimeout(()=>{const solo=S.mode=="solo";let g;
+if(solo&&S.style=="malin")g=wpick([...Array(R.opts).keys()].map(i=>1+3*(H[i]||0)+(R.last===i?2:0)));else g=rnd(R.opts);
+R.g=g;R.out=R.alive.filter(p=>R.claims[p]===g);
+if(solo){const c=R.claims[0];H[c]=(H[c]||0)+1;R.last=c}
+draw();
+const left=R.alive.length-R.out.length,fin=solo?(R.out.length||R.opts==2):left<=1;
+const txt=solo?(R.out.length?"💥 Même option que le jeu : perdu !":"✅ Bien joué, tu survis !"):(R.out.length?`💥 ${R.out.map(p=>"J"+(p+1)).join(", ")} éliminé !`:"😮‍💨 Personne n’est éliminé : le jeu a pris une option libre.");
+$("msg").innerHTML=`${txt}<button class="big" onclick="next()">${fin?"Voir le résultat":"Manche suivante"}</button>`},1200)}
+function next(){R.alive=R.alive.filter(p=>!R.out.includes(p));
+if(S.mode=="solo"){if(R.out.length||R.opts==2)return end(!R.out.length)}else if(R.alive.length<=1)return end(true);
+R.opts--;round()}
+function end(w){const g=S.mode=="group",k=R.n-1;
+$("app").innerHTML=`<h1>${g?"🏆 J"+(R.alive[0]+1)+" gagne !":w?"🏆 Victoire !":"💥 Perdu !"}</h1><p class="m">${g?"Dernier joueur en vie.":w?"Tu as survécu à toutes les manches.":`Tu as tenu ${k} manche${k>1?"s":""}.`}</p><button class="big" onclick="go()">Rejouer</button><button class="big alt" onclick="home()">Menu</button>`}
+const esc=s=>s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function loadU(){return TH.where('ok','==',true).get().then(s=>{U=s.docs.map(d=>d.data()).filter(d=>typeof d.n=='string'&&Array.isArray(d.o)&&d.o.length>1&&d.o.length<11).map(d=>({n:esc(d.n),o:d.o.map(x=>esc(String(x)))}));ONLINE=true}).catch(()=>{ONLINE=false})}
+function mine(){$('app').innerHTML=`<div class='top'><span>Proposer un thème</span><button class='lnk' onclick='home()'>✕</button></div><p class='m'>Donne un nom et 2 à 10 options (une par ligne ou séparées par des virgules). L’admin doit le valider avant qu’il apparaisse dans le jeu.</p><input id='tn' placeholder='Nom du thème (ex. Boissons)' maxlength='40'><textarea id='to' rows='6' placeholder='Café&#10;Thé&#10;Chocolat'></textarea><div id='er' class='m'></div><button class='big' onclick='addT()'>Envoyer la proposition</button>`}
+function addT(){const n=$('tn').value.trim().slice(0,40),o=[...new Set($('to').value.split(/\n|,/).map(s=>s.trim().slice(0,30)).filter(Boolean))],e=$('er');
+if(!n)return e.textContent='Donne un nom au thème.';
+if(o.length<2||o.length>10)return e.textContent=`Il faut entre 2 et 10 options différentes (tu en as ${o.length}).`;
+e.textContent='Envoi…';
+TH.add({n,o,ok:false,t:Date.now()}).then(()=>{$('app').innerHTML=`<h1>Merci ! 💡</h1><p class='m'>Ta proposition est envoyée. Elle apparaîtra dans le jeu une fois validée.</p><button class='big' onclick='home()'>Retour</button>`}).catch(()=>{e.textContent='Envoi impossible. Vérifie ta connexion.'})}
+const row=(u,p)=>`<div class='row'><span><b>${esc(u.n)}</b> (${u.o.length} options)<br><small>${u.o.map(x=>esc(String(x))).join(', ')}</small></span><span>${p?`<button class='lnk' onclick="okT('${u.id}')">✅</button>`:''}<button class='lnk' onclick="delT('${u.id}')">🗑️</button></span></div>`;
+function admin(){if(!ADM){const p=prompt('Mot de passe admin');if(p!==ADMIN_PW)return;ADM=true}adm()}
+function adm(){$('app').innerHTML="<p class='m'>Chargement…</p>";
+Promise.all([TH.where('ok','==',false).get(),TH.where('ok','==',true).get()]).then(([p,a])=>{const f=s=>s.docs.map(d=>({id:d.id,...d.data()})).filter(d=>typeof d.n=='string'&&Array.isArray(d.o));const P=f(p),A=f(a);
+$('app').innerHTML=`<div class='top'><span>Espace admin</span><button class='lnk' onclick='home()'>✕</button></div><h3>À valider (${P.length})</h3>${P.map(u=>row(u,1)).join('')||"<p class='m'>Aucune proposition.</p>"}<h3>Thèmes validés (${A.length})</h3>${A.map(u=>row(u,0)).join('')||"<p class='m'>Aucun thème validé.</p>"}`;loadU()}).catch(()=>{$('app').innerHTML="<p class='m'>Erreur de connexion à la base.</p><button class='big' onclick='home()'>Retour</button>"})}
+function okT(id){TH.doc(id).update({ok:true}).then(adm)}
+function delT(id){TH.doc(id).delete().then(adm)}
+$('app').innerHTML="<p class='m'>Chargement…</p>";
+Promise.race([loadU(),new Promise(r=>setTimeout(r,4000))]).then(home);
+</script>
+</body>
+</html>
