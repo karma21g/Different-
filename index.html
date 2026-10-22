@@ -83,7 +83,7 @@ const wpick=w=>{let r=Math.random()*w.reduce((a,b)=>a+b,0);for(let i=0;i<w.lengt
 const seg=(k,items)=>`<div class="seg">${items.map(([v,l])=>`<button class="${S[k]===v?"on":""}" onclick='set(${JSON.stringify(k)},${JSON.stringify(v)})'>${l}</button>`).join("")}</div>`;
 function set(k,v){S[k]=v;if(S.players>S.start)S.players=S.start;home()}
 function home(){clearTimeout(R.t);const n=[2,3,4,5,6,7,8,9,10];
-$("app").innerHTML=`<h1>Pas pareil ! 🎯</h1><p class="m">Ne choisis pas la même option que le jeu, sinon tu es éliminé.</p><h3>Mode</h3>${seg("mode",[["solo","Solo"],["group","Groupe"]])}<h3>Options au départ</h3>${seg("start",n.map(x=>[x,x]))}${S.mode=="solo"?`<h3>Le jeu est…</h3>${seg("style",[["hasard","🎲 Hasard"],["malin","🧠 Malin"]])}`:`<h3>Joueurs (même écran)</h3>${seg("players",n.filter(x=>x<=S.start).map(x=>[x,x]))}`}<h3>Thèmes</h3>${seg("pack",[["general","Général"],["perso","Communauté"],["tout","Tout"]])}<button class="lnk" style="font-size:1rem;color:var(--acc);padding:10px 0" onclick="mine()">💡 Proposer un thème</button><button class="big" onclick="go()">Jouer</button><button class="lnk" style="opacity:.45;margin-top:18px" onclick="admin()">⚙️ Admin</button>`}
+$("app").innerHTML=`<h1>Pas pareil ! 🎯</h1><p class="m">Ne choisis pas la même option que le jeu, sinon tu es éliminé.</p><h3>Mode</h3>${seg("mode",[["solo","Solo"],["group","Groupe"]])}<h3>Options au départ</h3>${seg("start",n.map(x=>[x,x]))}${S.mode=="solo"?`<h3>Le jeu est…</h3>${seg("style",[["hasard","🎲 Hasard"],["malin","🧠 Malin"]])}`:`<h3>Joueurs (même écran)</h3>${seg("players",n.filter(x=>x<=S.start).map(x=>[x,x]))}`}<h3>Thèmes</h3>${seg("pack",[["general","Général"],["perso","Communauté"],["tout","Tout"]])}<button class="lnk" style="font-size:1rem;color:var(--acc);padding:10px 0" onclick="mine()">💡 Proposer un thème</button><button class="big" onclick="go()">Jouer</button><button class="big alt" onclick="online()">🌐 En ligne (chacun son téléphone)</button><button class="lnk" style="opacity:.45;margin-top:18px" onclick="admin()">⚙️ Admin</button>`}
 function go(){R={opts:S.start,n:0,alive:S.mode=="group"?[...Array(S.players).keys()]:[0]};round()}
 function round(){R.n++;const d=S.mode=="solo"?6:Math.max(10,3+2*R.alive.length);let L=[];if(S.pack!="perso")L=L.concat(T[R.opts]||[]);if(S.pack!="general")L=L.concat(U.filter(u=>u.o.length==R.opts).map(u=>[u.n,u.o]));if(!L.length)L=T[R.opts];R.th=L[rnd(L.length)];R.claims={};R.sel=null;R.g=null;R.over=false;
 $("app").innerHTML=`<div class="top"><span>Manche ${R.n} · ${R.opts} options</span><button class="lnk" onclick="home()">✕</button></div><h2>${R.th[0]}</h2><div class="bar"><i style="animation-duration:${d}s"></i></div><div id="z"></div><div id="msg"></div>`;
@@ -128,6 +128,44 @@ function admin(){if(!ADM){const p=prompt('Mot de passe admin');if(p!==ADMIN_PW)r
 function adm(){$('app').innerHTML="<p class='m'>Chargement…</p>";
 Promise.all([TH.where('ok','==',false).get(),TH.where('ok','==',true).get()]).then(([p,a])=>{const f=s=>s.docs.map(d=>({id:d.id,...d.data()})).filter(d=>typeof d.n=='string'&&Array.isArray(d.o));const P=f(p),A=f(a);
 $('app').innerHTML=`<div class='top'><span>Espace admin</span><button class='lnk' onclick='home()'>✕</button></div><h3>À valider (${P.length})</h3>${P.map(u=>row(u,1)).join('')||"<p class='m'>Aucune proposition.</p>"}<h3>Thèmes validés (${A.length})</h3>${A.map(u=>row(u,0)).join('')||"<p class='m'>Aucun thème validé.</p>"}`;loadU()}).catch(()=>{$('app').innerHTML="<p class='m'>Erreur de connexion à la base.</p><button class='big' onclick='home()'>Retour</button>"})}
+const RM=firebase.firestore().collection("rooms"),un=s=>s.replace(/&quot;/g,'"').replace(/&gt;/g,'>').replace(/&lt;/g,'<').replace(/&amp;/g,'&');
+let me={id:"",name:""},room=null,rid=null,unsub=null,rt=null;
+try{me.id=localStorage.getItem('pp-id')||'';me.name=localStorage.getItem('pp-name')||''}catch(e){}
+if(!me.id){me.id=Math.random().toString(36).slice(2,10);try{localStorage.setItem('pp-id',me.id)}catch(e){}}
+const P=()=>Object.entries(room.players).map(([id,p])=>({id,...p})).sort((a,b)=>a.j-b.j),AL=()=>P().filter(p=>p.a),isH=()=>room.host===me.id;
+function online(){clearTimeout(R.t);$('app').innerHTML=`<div class='top'><span>Jeu en ligne</span><button class='lnk' onclick='home()'>✕</button></div><p class='m'>Chacun joue sur son téléphone. Les options de départ et les thèmes choisis à l’accueil sont ceux de la salle que tu crées.</p><h3>Ton prénom</h3><input id="nm" maxlength="12" placeholder="Prénom" value="${esc(me.name)}"><button class='big' onclick='mk()'>Créer une salle</button><h3>Ou rejoindre une salle</h3><input id="cd" maxlength="4" placeholder="Code à 4 lettres" style="text-transform:uppercase"><button class='big alt' onclick='jn()'>Rejoindre</button><div id='er' class='m'></div>`}
+function nm(){const n=($('nm').value.trim()||'Joueur').slice(0,12);me.name=n;try{localStorage.setItem('pp-name',n)}catch(e){}return n}
+function mk(){const n=nm(),c=Array.from({length:4},()=>'ABCDEFGHJKLMNPQRSTUVWXYZ'[rnd(24)]).join('');
+RM.doc(c).set({host:me.id,start:S.start,pack:S.pack,phase:'lobby',players:{[me.id]:{n,a:true,j:Date.now()}}}).then(()=>watch(c)).catch(()=>{$('er').textContent='Création impossible (règles Firestore ?).'})}
+function jn(){const n=nm(),c=$('cd').value.trim().toUpperCase(),e=$('er');
+RM.doc(c).get().then(d=>{if(!d.exists)return e.textContent='Salle introuvable.';const r=d.data();
+if(r.players[me.id])return watch(c);
+if(r.phase!='lobby')return e.textContent='La partie a déjà commencé.';
+if(Object.keys(r.players).length>=10)return e.textContent='Salle pleine (10 joueurs max).';
+return RM.doc(c).update({['players.'+me.id]:{n,a:true,j:Date.now()}}).then(()=>watch(c))}).catch(()=>{e.textContent='Connexion impossible.'})}
+function watch(c){rid=c;if(unsub)unsub();unsub=RM.doc(c).onSnapshot(d=>{if(!d.exists)return leave();room=d.data();host();view()},()=>{})}
+function leave(){if(unsub)unsub();unsub=null;clearTimeout(rt);room=null;rid=null;home()}
+function host(){clearTimeout(rt);if(!isH()||room.phase!='pick')return;const cl=Object.values(room.claims);if(AL().every(p=>cl.includes(p.id)))return doReveal();rt=setTimeout(doReveal,Math.max(0,room.end-Date.now()))}
+function doReveal(){clearTimeout(rt);const ref=RM.doc(rid);firebase.firestore().runTransaction(t=>t.get(ref).then(d=>{const r=d.data();if(r.phase!='pick')return;
+const cl={...r.claims},al=Object.keys(r.players).filter(id=>r.players[id].a),has=Object.values(cl),free=sh([...Array(r.opts).keys()].filter(i=>cl['c'+i]===undefined));
+al.forEach(id=>{if(!has.includes(id))cl['c'+free.pop()]=id});const g=rnd(r.opts);
+t.update(ref,{phase:'reveal',claims:cl,g,out:al.filter(id=>cl['c'+g]===id)})}))}
+function oclaim(i){const ref=RM.doc(rid);firebase.firestore().runTransaction(t=>t.get(ref).then(d=>{const r=d.data(),p=r.players[me.id];
+if(r.phase!='pick'||!p||!p.a||r.claims['c'+i]!==undefined||Object.values(r.claims).includes(me.id))return;t.update(ref,{['claims.c'+i]:me.id})}))}
+function pickTh(o){let L=[];if(room.pack!='perso')L=L.concat(T[o]||[]);if(room.pack!='general')L=L.concat(U.filter(u=>u.o.length==o).map(u=>[un(u.n),u.o.map(un)]));if(!L.length)L=T[o];const t=L[rnd(L.length)];return{n:t[0],o:t[1]}}
+function newR(o,n,c,extra){const d=Math.max(10,3+2*c);RM.doc(rid).update({...extra,phase:'pick',opts:o,n,d,th:pickTh(o),claims:{},g:null,out:[],end:Date.now()+d*1000})}
+function startO(){const ps=P(),up={};ps.forEach(p=>{up['players.'+p.id+'.a']=true});newR(Math.max(room.start,ps.length),1,ps.length,up)}
+function nextO(){const out=room.out,al=AL().filter(p=>!out.includes(p.id)),up={};out.forEach(id=>{up['players.'+id+'.a']=false});
+if(al.length<=1)return RM.doc(rid).update({...up,phase:'end',win:al[0]?al[0].n:'?'});newR(room.opts-1,room.n+1,al.length,up)}
+function again(){RM.doc(rid).update({phase:'lobby'})}
+function view(){const r=room,ps=P(),h=isH(),tp=`<div class='top'><span>Salle ${rid}</span><button class='lnk' onclick='leave()'>✕</button></div>`,col=id=>C[ps.findIndex(p=>p.id===id)%10],nm2=id=>{const q=ps.find(p=>p.id===id);return q?esc(String(q.n)):'?'};let x;
+if(r.phase=='lobby'){x=tp+`<h2>${rid}</h2><p class='m' style='text-align:center'>Les amis tapent ce code dans « Jeu en ligne ». ${r.start} options au départ.</p><div class='chips'>${ps.map(p=>`<span class='chip on' style='--c:${col(p.id)}'>${esc(String(p.n))}</span>`).join('')}</div>`+(h?`<button class='big' onclick='startO()' ${ps.length<2?'disabled':''}>Lancer (${ps.length} joueurs)</button>`:`<p class='m' style='text-align:center'>En attente de l’hôte…</p>`)}
+else if(r.phase=='end'){x=tp+`<h1>🏆 ${esc(String(r.win))} gagne !</h1><p class='m'>Dernier joueur en vie.</p>`+(h?`<button class='big' onclick='again()'>Rejouer</button>`:`<p class='m'>L’hôte peut relancer une partie.</p>`)}
+else{const rv=r.phase=='reveal',mine=Object.values(r.claims).includes(me.id),a=r.players[me.id]&&r.players[me.id].a;let msg;
+if(rv){const left=AL().length-r.out.length;msg=(r.out.length?`💥 ${r.out.map(nm2).join(', ')} éliminé !`:'😮‍💨 Personne n’est éliminé.')+(h?`<button class='big' onclick='nextO()'>${left<=1?'Voir le résultat':'Manche suivante'}</button>`:`<p class='m'>L’hôte lance la suite…</p>`)}
+else msg=!a?'Tu es éliminé : regarde la suite 👀':mine?'Option prise ✅ Attends les autres…':'Touche vite ton option !';
+x=tp+`<div class='top'><span>Manche ${r.n} · ${r.opts} options</span><span>${AL().length} en vie</span></div><h2>${esc(r.th.n)}</h2>`+(rv?'':`<div class='bar'><i style='animation-duration:${r.d}s;animation-delay:-${Math.max(0,r.d-(r.end-Date.now())/1000).toFixed(1)}s'></i></div>`)+`<div class='opts ${r.opts>6?'many':''}'>${r.th.o.map((o,i)=>{const id=r.claims['c'+i],hit=rv&&r.g===i;return `<button class='opt ${hit?'g':''}' ${rv||id||mine||!a?'disabled':''} onclick='oclaim(${i})'><span>${esc(o)}</span>${id?`<em style='--c:${col(id)}'>${id===me.id?'Toi':nm2(id)}</em>`:''}${hit?'<b>🎯 Le jeu</b>':''}</button>`}).join('')}</div><div id='msg'>${msg}</div>`}
+$('app').innerHTML=x}
 function okT(id){TH.doc(id).update({ok:true}).then(adm)}
 function delT(id){TH.doc(id).delete().then(adm)}
 $('app').innerHTML="<p class='m'>Chargement…</p>";
